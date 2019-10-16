@@ -7,104 +7,36 @@
         </div>
       </div>
     </nav>
-    <nav class="navbar is-white">
-      <div class="container">
-        <div class="navbar-menu">
-          <div class="navbar-start">
-            <a
-              class="navbar-item is-active"
-              href="#"
-            >Newest</a>
-            <a
-              class="navbar-item"
-              href="#"
-            >In Progress</a>
-            <a
-              class="navbar-item"
-              href="#"
-            >Finished</a>
-          </div>
-        </div>
-      </div>
-    </nav>
-    <section class="container">      
-      <div class="columns">          
+    <TheNavbar />
+    <section class="container">
+      <div class="columns">
         <div class="column is-3">
-          <a
-            v-if="!isFormDisplayed"
-            class="button is-primary is-block is-alt is-large"
-            href="#"
-            @click="toggleFormDisplay"
-          >New Activity</a>
-          <div
-            v-if="isFormDisplayed"
-            class="create-form"
-          >
-            <h2>Create Activity</h2>
-            <form>
-              <div class="field">
-                <label class="label">Title</label>
-                <div class="control">
-                  <input
-                    v-model="newActivity.title"
-                    class="input"
-                    type="text"
-                    placeholder="Read a Book"
-                  >
-                </div>
-              </div>
-              <div class="field">
-                <label class="label">Notes</label>
-                <div class="control">
-                  <textarea
-                    v-model="newActivity.notes"
-                    class="textarea"
-                    placeholder="Write some notes here"
-                  />
-                </div>
-              </div>  
-                <div class="field">
-                <label class="label">Notes</label>
-                <div class="control">
-                  <select v-model="newActivity.category">
-                    <option disabled value="">Please select One</option>
-                    <option v-for="category in categories" :key="category._id" :value="category._id">{{ category.text }}</option>
-                  </select>
-                </div>
-              </div>
-              <div class="field is-grouped">
-                <div class="control">
-                  <!-- Usando la computed property, si la funcion a la que estamos llamando está dentro de methods
-                  entonces tendrímos que poner los paréntesis finales. Si se trata de la computed, no es necesario -->
-                  <button
-                    class="button is-link"
-                    v-bind:disabled="!isFormValid"
-                    @click="createActivity"
-                  >
-                    Create Activity
-                  </button>
-                </div>
-                <div class="control">
-                  <button
-                    class="button is-text"
-                    @click="toggleFormDisplay"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
+          <ActivityCreate :categories="categories"/>
         </div>
         <div class="column is-9">
-          <div class="box content">
-            <ActivityItem
-              v-for="activity in activities"
-              :key="activity.id"
-              :activity="activity"
-            />
-            <div class="activity-length">Currently {{ activityLength }} activities</div>
-            <div class="activity-motivation">{{ activityMotivation }}</div>
+          <div class="box content"
+               :class="{fetching: isFetching, 'has-error': error}">
+            <div v-if="error">
+              {{ error }}
+            </div>
+            <div v-else>
+              <div v-if="isFetching">
+                Loading ...
+              </div>
+              <div v-if="isDataLoaded">
+                 <ActivityItem
+                v-for="activity in activities"
+                :key="activity.id"
+                :activity="activity"
+                :categories="categories"
+              />
+              </div>
+             
+            </div>
+            <div v-if="!isFetching">
+              <div class="activity-length">Currenly {{ activityLength }} activities</div>
+              <div class="activity-motivation">{{ activityMotivation }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -113,81 +45,75 @@
 </template>
 
 <script>
-import ActivityItem from '@/components/ActivityItem.vue'
-//Cuando no se importa el default, se tiene que especificar entre llaves lo que se importe
-import {fetchActivities, fetchCategories, fetchUser} from '@/api'
+import Vue from 'vue'
+import store from './store'
+
+import ActivityItem from '@/components/ActivityItem'
+import ActivityCreate from '@/components/ActivityCreate'
+import TheNavbar from '@/components/TheNavbar'
+
+// import { fetchActivities, fetchUser, fetchCategories, deleteActivityAPI } from '@/api'
+
+import fakeApi from '@/lib/fakeApi'
 export default {
   name: 'App',
-  components: {
-    ActivityItem
-  },
-  data(){
+  components: {ActivityItem, ActivityCreate, TheNavbar},
+  data () {
+    const { state: {activities, categories}} = store
     return {
-          isFormDisplayed: false,
-          creator: 'JGil',
-          appName: 'activityPlanner',
-          newActivity: {
-            title: '',
-            notes: '',
-            progress: 0,
-            id:'dasdasd',
-            category: '1546969049',
-            createdAt: 1546969144391,
-            updatedAt: 1546969144391,
-            category: ''
-          },
-          items: {1: {name: 'Filip'}, 2: {name: 'John'}},
-          user: {
-          
-          },
-          activities: {
-           
-          },
-          categories: {
-
-          }
-        }
+      creator: 'Filip Jerga',
+      appName: 'Activity Planner',
+      isFetching: false,
+      error: null,
+      user: {},
+      activities,
+      categories
+    }
   },
-  created(){
-    this.activities=fetchActivities();
-    this.user=fetchUser();
-    this.categories=fetchCategories();
-  },
-  computed:{
-    isFormValid(){
-      return this.newActivity.title && this.newActivity.notes
+  computed: {
+    fullAppName () {
+      return this.appName + ' by ' + this.creator
     },
-    fullAppName(){
-      return `${this.appName} by ${this.creator} computed`
+    activityLength () {
+      return Object.keys(this.activities).length
     },
-    activityLength(){
-      debugger
-      const activitiesKeyArray=Object.keys(this.activities)
-      const activitiesLength=activitiesKeyArray.length
-      return activitiesLength
-      // return Object.keys(this.activities).length
-    },
-    activityMotivation(){
-      if(this.activityLength && this.activityLength<5){
-        return 'Nice to see some goals'
-      }else if(this.activityLength>=5){
-        return 'So many activities! Good job!'
-      }else{
-        return 'No activities. So sad :('
+    activityMotivation () {
+      if (this.activityLength && this.activityLength < 5) {
+        return 'Nice to see some activities (:'
+      } else if (this.activityLength >= 5) {
+        return 'So many activities! Good Job!'
+      } else {
+        return 'No activities, so sad :('
       }
+    },
+    activitiesLength(){
+      return Object.keys(this.activities).length
+    },
+    categoriesLength(){
+      return Object.keys(this.categories).length
+    },
+    isDataLoaded () {
+      return this.activitiesLength && this.categoriesLength
     }
   },
-  methods:{
-    toggleTextDisplay () {
-      this.isTextDisplayed = !this.isTextDisplayed
-    },
-    toggleFormDisplay () {
-      this.isFormDisplayed = !this.isFormDisplayed
-    },
-    createActivity () {
-      // console.log(this.newActivity)
-      // this.activities.push(this.newActivity)
-    }
+  created () {
+
+    // fakeApi.fillDB()
+
+    this.isFetching = true
+    store.fetchActivities()
+      .then(activities => {
+        this.isFetching = false
+      })
+      .catch(err => {
+        this.error = err
+        this.isFetching = false
+      })
+
+    this.user = store.fetchUser()
+    store.fetchCategories()
+      .then(categories => {
+    })
   }
 }
 </script>
@@ -197,9 +123,7 @@ export default {
   font-family: 'Avenir', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: left;
   color: #2c3e50;
-  margin-top: 60px;
 }
 
 html,body {
@@ -210,11 +134,19 @@ footer {
   background-color: #F2F6FA !important;
 }
 
-.activity-motivation{
-  float:right;
+.fetching {
+  border: 2px solid orange;
 }
 
-.activity-length{
+.has-error {
+  border: 2px solid red;
+}
+
+.activity-motivation {
+ float: right;
+}
+
+.activity-length {
   display: inline-block;
 }
 
@@ -279,8 +211,5 @@ article.post:last-child {
   font-size: 31px;
   padding: 20px;
 }
-
-
-
 
 </style>
