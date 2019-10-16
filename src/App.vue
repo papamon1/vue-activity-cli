@@ -7,7 +7,7 @@
         </div>
       </div>
     </nav>
-    <TheNavbar />
+    <TheNavbar @filterSelected="setFilter"/>
     <section class="container">
       <div class="columns">
         <div class="column is-3">
@@ -25,7 +25,7 @@
               </div>
               <div v-if="isDataLoaded">
                  <ActivityItem
-                v-for="activity in activities"
+                v-for="activity in filteredActivities"
                 :key="activity.id"
                 :activity="activity"
                 :categories="categories"
@@ -67,10 +67,53 @@ export default {
       error: null,
       user: {},
       activities,
-      categories
+      categories,
+      filter:'all'
     }
   },
   computed: {
+    filteredActivities(){
+
+
+      //Aqui vamos a hacer algo curioso. Vamos a hacer que la funcion contidition tenga una condición u otra según nos convenga
+      //en este caso, según tengamos un valor u otro en el filtro
+
+      let filteredActivities={}
+      let condition
+      if (this.filter==='all'){
+        return this.activities
+      } 
+      if (this.filter==='inprogress'){
+// condition será una funcion que acepte un valor como parámetro y devuelva true o false dependiendo de la evaluacion        
+
+        condition = (value) => value > 0 && value < 100
+      }
+      else if (this.filter==='finished'){
+        condition = (value) => value===100
+      } 
+      else{
+        condition = (value) => value===0
+      } 
+// Lo hacemos de esta manera porque queremos usar la opción filter. Esta sólo puede usarse dentro de un array
+// Esta sintaxis convierte un objeto que tiene actividades en un array de objetos activities. Y ya sobre el se puede hacer filter
+
+
+
+
+// Esta sintaxis compleja se interpreta de la siguiente manera. Se retornan, y por tanto quedan dentro de filteredActivities, aquellas actividades
+// cuyo progress se encuentre entre 0 y 100 en este ejemplo     
+
+  // Este tipo de sintaxis devuelve true si se cumplen las condiciones
+    //condition es una función que devolvera true o false dependiendo de como se haya definido segun el filtro
+    // Al devolver true o false, esta actividad será añadida al nuevo array filteredActivities
+    
+      filteredActivities=Object.values(this.activities)
+        .filter(activity=>{return condition (activity.progress)})
+      
+
+  // Devolvemos algo por defecto, porque en caso de que filter no tuviese ninguna opción, filteredActivities volvería undefined
+      return filteredActivities;
+    },
     fullAppName () {
       return this.appName + ' by ' + this.creator
     },
@@ -114,8 +157,14 @@ export default {
     store.fetchCategories()
       .then(categories => {
     })
+  },
+  methods:{
+  setFilter(filterOption){
+    this.filter=filterOption
   }
 }
+}
+
 </script>
 
 <style>
